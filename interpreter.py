@@ -6,27 +6,27 @@
 INTEGER,PLUS,EOF = 'INTEGER','PLUS','EOF'
 
 class Token(object):
-	def __init__(self,type,value):
-		#token type : INTEGER PLUS OR EOf
-		self.type = type
-		#token value is a single digit number, or '+', or None
-		self.value = value;
+    def __init__(self,type,value):
+        #token type : INTEGER PLUS OR EOf
+        self.type = type
+        #token value is a single digit number, or '+', or None
+        self.value = value;
 
-	def __str__(self):
-		""" String representation of the class instance.
+    def __str__(self):
+        """ String representation of the class instance.
 
-		Examples:
-			Token(INTEGER,3)
-			Token(PLUS,'+')
+        Examples:
+            Token(INTEGER,3)
+            Token(PLUS,'+')
             **when we end reading of the input**
-			Token(EOF,None)
+            Token(EOF,None)
 
-		"""
+        """
 
-		return 'Token({type},{value})'.format(
-			type = self.type,
+        return 'Token({type},{value})'.format(
+            type = self.type,
             value = repr(self.value)
-		)
+        )
 
     def __repr__(self):
         return self.__str__()
@@ -54,7 +54,7 @@ class Interpreter(object):
         #if so then return EOF token because there is no
         #input left to convert into tokens
   
-        if self.position > len(text) - 1;
+        if self.position > len(text) - 1:
             return Token(EOF,None);
 
         current_char = inp[self.position]
