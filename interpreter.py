@@ -49,6 +49,7 @@ class Interpreter(object):
         self.inp = inp
         self.position = 0
         self.current_token = None
+        self.current_char = self.inp[self.position]
 
     def error(self,recursion=False):
         error_message = "Error parsing input"
@@ -57,11 +58,20 @@ class Interpreter(object):
 
         raise Exception(error_message)
 
+
+    def advance(self):
+        """ Advance the `position` pointer and set current_char variable"""
+        self.position += 1
+        if self.position > len(self.inp) - 1:
+            self.current_char = None
+        else:
+            self.current_char = self.inp[self.position]
+
     def integer(self):
         result = '';
-        while self.position < len(self.inp)  and self.inp[self.position].isdigit():
-            result += self.inp[self.position]
-            self.position += 1
+        while self.current_char is not None  and self.current_char.isdigit():
+            result += self.current_char
+            self.advance()
             
         return int(result);
     def get_next_token(self):
@@ -83,23 +93,25 @@ class Interpreter(object):
         current_char = inp[self.position]
 
         if current_char.isdigit():
+            print current_char
             token = Token(INTEGER,self.integer())
             return token
         elif current_char == '+':
+            print current_char
+            self.advance()
             token = Token(PLUS,"+")
-            self.position += 1
             return token
         elif current_char == '-':
             token = Token(MINUS,"-")
-            self.position += 1
+            self.advance()
             return token
         elif current_char == '*':
             token = Token(MULTYPLY,"*")
-            self.position += 1
+            self.advance()
             return token
         elif current_char == '/':
             token = Token(DIVIDE,"/")
-            self.position += 1
+            self.advance()
             return token
 
 
@@ -108,16 +120,20 @@ class Interpreter(object):
 
     def consume_whitespace(self):
         #because we add one, and we don't 
-        while self.position < len(self.inp)  and self.inp[self.position] == ' ' :
-            self.position += 1
+        while self.current_char == ' ' :
+            self.advance()
+
+        print("After consuming whitespaces I have character {character}".format(
+                character = self.current_char
+            ))
     
 
 
-    def assign(self,token,token_type):
-        if token.type == token_type:
-            return token.value
-        else:
-            self.error()
+    def term(self):
+        """RETURN INTEGER TOKEN  VALUE """
+        token = self.current_token
+        self.eat(INTEGER)
+        return token.value
 
     def eat(self, token_type):
         #compare the current token type with the passed list of
@@ -125,75 +141,35 @@ class Interpreter(object):
         #and assign the next token to the self.current_token
         #otherwise return false;
         
-
         if self.current_token.type in token_type:
+            print("Eating {token}".format(
+                token=self.current_token
+                ))
             self.consume_whitespace()
             self.current_token = self.get_next_token();
-            return True
         else:
-            return False
+            error()
 
     def expr(self):
-        """expr -> INTEGER PLUS INTEGER"""
+        """Yay. This can now be calles arithmetic expression parser/interpreter """
 
         #add support for SPACES INTEGER SPACES SIGN SPACES INTEGER SPACES...
         self.consume_whitespace()
 
         #set current token to the first token taken from input
         self.current_token = self.get_next_token()
-        tokens = []
-        while self.current_token.type != EOF:
-            token = self.current_token;
-            tokens.append(token)
-            self.eat(token.type)
-        
-        #print tokens
 
-        counter = 0
-        max_recursion = 200
-        result = 0
-        while counter < max_recursion:
-            if len(tokens) == 1 and tokens[0].type == INTEGER:
-                result = tokens[0]
-                break 
-            remove_indexes = None
-            temp_token = None
-            for i,token in enumerate(tokens):
-                if token.type in [PLUS,MINUS]:
-                    if i != 0 and i != len(tokens)-1:
-                        #print i
-                        #print token.value
-                        if tokens[i+1].type == INTEGER and tokens[i-1].type == INTEGER:
-                            temp_token = Token(INTEGER,
-                                                ops[token.value](
-                                                    tokens[i-1].value,
-                                                    tokens[i+1].value
-                                                    )
-                                                )
-                                          
-                            #print tokens
-                            remove_indexes=[i+1,i,i-1]
-                            break;
-                        else:
-                            self.error()
-                    else:
-                        self.error()
-            if remove_indexes:
-                for i in remove_indexes:
-                    #print i
-                    del tokens[i]
-            if temp_token:
-                tokens.insert(0, temp_token)
+        """What a difference for implementation :( , but I like mine too"""
+        result = self.term()
 
-            #recursion counter
-            counter +=1
-        
-        if counter == max_recursion:
-            self.error(recursion=True)
-        else:
-            return result.value
+        while self.current_token.type in (DIVIDE,MULTYPLY):
+            token = self.current_token
+            self.eat([DIVIDE,MULTYPLY])
+            result = ops[token.value](result,self.term())
+                
+        return result
 
-        
+
 
 #our program main entry point
 def main():
@@ -228,13 +204,13 @@ def main():
         interpreter = Interpreter(inp)
         
         # Chekc for parsing errors 
-        try:
-            result = interpreter.expr()
+        #try:
+        result = interpreter.expr()
         #If we end up here, we're cool :) 
-            print(result)
-        except Exception as e:
+        print(result)
+        #except Exception as e:
             #We'll print the exception
-            print(str(e))
+        #    print(str(e))
         
 
 """
