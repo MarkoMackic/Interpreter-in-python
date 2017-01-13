@@ -3,7 +3,7 @@
 #EOF (end of file) token is used to indicate that
 #there is no more input left for lexical analysis
 
-INTEGER,PLUS,EOF = 'INTEGER','PLUS','EOF'
+INTEGER,PLUS,EOF,MINUS = 'INTEGER','PLUS','EOF','MINUS'
 
 class Token(object):
     def __init__(self,type,value):
@@ -67,44 +67,81 @@ class Interpreter(object):
             token = Token(PLUS,"+")
             self.position += 1
             return token
+        elif current_char == '-':
+            token = Token(MINUS,"-")
+            self.position += 1
+            return token
+
 
         self.error()
+
+    def consume_whitespace(self):
+        #because we add one, and we don't 
+        while self.position < len(self.inp)  and self.inp[self.position] == ' ' :
+            self.position += 1
+        
 
     def eat(self, token_type):
         #compare the current token type with the passed 
         #token type and if they match than 'eat' the current token
         #and assign the next token to the self.current_token
         #otherwise raise exception;
+        
 
         if self.current_token.type == token_type:
+            self.consume_whitespace()
             self.current_token = self.get_next_token();
+            return True
         else:
-            self.error()
+            return False
 
     def expr(self):
         """expr -> INTEGER PLUS INTEGER"""
+
+        #add support for SPACES INTEGER SPACES SIGN SPACES INTEGER SPACES...
+        self.consume_whitespace()
+
         #set current token to the first token taken from input
         self.current_token = self.get_next_token()
 
-        #we expect a single digit number
-        left = self.current_token
-        self.eat(INTEGER)
+        left = str(self.current_token.value) #we can suppose it's int as we did so far
+        
+        #cosume all integer tokens, append it to left string, and exit the loop, this while condition is to check if left is int token..
+        while self.current_token.type == INTEGER:
+            self.eat(INTEGER)
+            #since eat changes the current token, we need to lookup again
+            if(self.current_token.type == INTEGER):
+                left += str(self.current_token.value)
+            else:
+                break
+
+        print("Passed left section {token}".format(token=left))
+        
         #then the operation sign
         operation = self.current_token
         self.eat(PLUS)
+        print("Passed operation section {token}".format(token=operation.value))
         #and then again single digit number
-        right = self.current_token
-        self.eat(INTEGER)
+        right = str(self.current_token.value)
+        
+        while self.current_token.type == INTEGER:
+            self.eat(INTEGER)
+            if(self.current_token.type == INTEGER):
+                right += str(self.current_token.value)
+            else:
+                break
 
+        print("Passed right section {token}".format(token=right))
         #After this we have our self.current_token equal to EOF 
         #at this point INTEGER PLUS INTEGER sequence of tokens
         #has been successfully found and the method can jus
         #return the result of adding two integers, thus
         #effectivly interpreting client inptu
-
-        result = left.value + right.value
+       
+        result = int(left) + int(right)
 
         return result
+        
 
 #our program main entry point
 def main():
@@ -138,10 +175,10 @@ def main():
         
         interpreter = Interpreter(inp)
         
-        # Chekck for parsing errors 
+        # Chekc for parsing errors 
         try:
             result = interpreter.expr()
-            #If we end up here, we're cool :) 
+        #If we end up here, we're cool :) 
             print(result)
         except Exception as e:
             #We'll print the exception
