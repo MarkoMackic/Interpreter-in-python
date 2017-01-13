@@ -1,4 +1,5 @@
 from __future__ import division
+#from collection import deque
 import operator
 
 
@@ -49,9 +50,20 @@ class Interpreter(object):
         self.position = 0
         self.current_token = None
 
-    def error(self):
-        raise Exception('Error parsing input')
+    def error(self,recursion=False):
+        error_message = "Error parsing input"
+        if recursion:
+            error_message += " maximum recursion depth reached"
 
+        raise Exception(error_message)
+
+    def integer(self):
+        result = '';
+        while self.position < len(self.inp)  and self.inp[self.position].isdigit():
+            result += self.inp[self.position]
+            self.position += 1
+            
+        return int(result);
     def get_next_token(self):
         """Lexical analyzer (also known as scanner or tokenizer)
         
@@ -71,8 +83,7 @@ class Interpreter(object):
         current_char = inp[self.position]
 
         if current_char.isdigit():
-            token = Token(INTEGER,int(current_char))
-            self.position += 1
+            token = Token(INTEGER,self.integer())
             return token
         elif current_char == '+':
             token = Token(PLUS,"+")
@@ -130,50 +141,58 @@ class Interpreter(object):
 
         #set current token to the first token taken from input
         self.current_token = self.get_next_token()
-
-        left = str(self.assign(self.current_token,INTEGER)) #we can suppose it's int as we did so far
+        tokens = []
+        while self.current_token.type != EOF:
+            token = self.current_token;
+            tokens.append(token)
+            self.eat(token.type)
         
-        #cosume all integer tokens, append it to left string, and exit the loop, this while condition is to check if left is int token..
-        while self.current_token.type == INTEGER:
-            self.eat([
-                INTEGER
-                ])
-            #since eat changes the current token, we need to lookup again
-            if(self.current_token.type == INTEGER):
-                left += str(self.current_token.value)
-            else:
-                break
+        #print tokens
 
-        print("Passed left section {token}".format(
-            token=left
-            ))
+        counter = 0
+        max_recursion = 200
+        result = 0
+        while counter < max_recursion:
+            if len(tokens) == 1 and tokens[0].type == INTEGER:
+                result = tokens[0]
+                break 
+            remove_indexes = None
+            temp_token = None
+            for i,token in enumerate(tokens):
+                if token.type in [PLUS,MINUS]:
+                    if i != 0 and i != len(tokens)-1:
+                        #print i
+                        #print token.value
+                        if tokens[i+1].type == INTEGER and tokens[i-1].type == INTEGER:
+                            temp_token = Token(INTEGER,
+                                                ops[token.value](
+                                                    tokens[i-1].value,
+                                                    tokens[i+1].value
+                                                    )
+                                                )
+                                          
+                            #print tokens
+                            remove_indexes=[i+1,i,i-1]
+                            break;
+                        else:
+                            self.error()
+                    else:
+                        self.error()
+            if remove_indexes:
+                for i in remove_indexes:
+                    #print i
+                    del tokens[i]
+            if temp_token:
+                tokens.insert(0, temp_token)
+
+            #recursion counter
+            counter +=1
         
-        #then the operation sign
-        operation = self.current_token
-        self.eat([PLUS,MINUS,MULTYPLY,DIVIDE])
-        print("Passed operation section {token}".format(token=operation.value))
-        #and then again single digit number
-        right = str(self.assign(self.current_token,INTEGER))
-        
-        while self.current_token.type == INTEGER:
-            self.eat([
-                INTEGER
-                ])
-            if(self.current_token.type == INTEGER):
-                right += str(self.current_token.value)
-            else:
-                break
+        if counter == max_recursion:
+            self.error(recursion=True)
+        else:
+            return result.value
 
-        print("Passed right section {token}".format(
-            token=right
-            ))
-        #After this we have our self.current_token equal to EOF 
-        #at this point INTEGER PLUS INTEGER sequence of tokens
-        #has been successfully found and the method can jus
-        #return the result of adding two integers, thus
-        #effectivly interpreting client inptu
-
-        return ops[operation.value](int(left),int(right))
         
 
 #our program main entry point
