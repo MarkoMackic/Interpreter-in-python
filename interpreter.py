@@ -32,9 +32,9 @@ class Token(object):
         return self.__str__()
 
 class Interpreter(object):
-    def __init__(self):
+    def __init__(self,inp):
         #client string input, e.g. "3+5"
-        self.inp = text
+        self.inp = inp
         self.position = 0
         self.current_token = None
 
@@ -54,18 +54,18 @@ class Interpreter(object):
         #if so then return EOF token because there is no
         #input left to convert into tokens
   
-        if self.position > len(text) - 1:
+        if self.position > len(inp) - 1:
             return Token(EOF,None);
 
         current_char = inp[self.position]
 
         if current_char.isdigit():
             token = Token(INTEGER,int(current_char))
-            self.pos += 1
+            self.position += 1
             return token
         elif current_char == '+':
             token = Token(PLUS,"+")
-            self.pos += 1
+            self.position += 1
             return token
 
         self.error()
@@ -96,23 +96,38 @@ class Interpreter(object):
         right = self.current_token
         self.eat(INTEGER)
 
-         #After this we have our self.current_token equal to EOF 
+        #After this we have our self.current_token equal to EOF 
+        #at this point INTEGER PLUS INTEGER sequence of tokens
+        #has been successfully found and the method can jus
+        #return the result of adding two integers, thus
+        #effectivly interpreting client inptu
 
-         #at this point INTEGER PLUS INTEGER sequence of tokens
-         #has been successfully found and the method can jus
-         #return the result of adding two integers, thus
-         #effectivly interpreting client inptu
+        result = left.value + right.value
 
-         result = left.value + right.value
-         print(result)
+        return result
 
 #our program main entry point
-def main()
-    while 1:
+def main():
+    while True:
         try:
-            #no inp ?
+          
             inp = raw_input('calc > ')
-        except EOFError:
+        except EOFError:     
+            """exception EOFError
+      
+            Raised when one of the built-in functions
+            (input() or raw_input()) hits an end-of-file condition (EOF)
+            without reading any data. 
+            (N.B.: the file.read() and file.readline() methods return an empty string 
+            when they hit EOF.)
+
+            """
+            break;
+        
+        except KeyboardInterrupt:
+            """User exited program  """
+
+            print("\nBye bye")
             break;
 
         if not inp:
@@ -120,6 +135,22 @@ def main()
 
         #after we ashured we have some input we can init our
         #interpreter
+        
         interpreter = Interpreter(inp)
-        result = Interpreter.expr()
-        print(result)
+        
+        # Chekck for parsing errors 
+        try:
+            result = interpreter.expr()
+            #If we end up here, we're cool :) 
+            print(result)
+        except Exception as e:
+            #We'll print the exception
+            print(str(e))
+        
+
+"""
+For python3 change raw_input to input .. 
+"""
+
+if __name__ == '__main__':
+    main()
