@@ -52,6 +52,13 @@ class Interpreter(object):
     def error(self):
         raise Exception('Error parsing input')
 
+    def integer(self):
+        result = '';
+        while self.position < len(self.inp)  and self.inp[self.position].isdigit():
+            result += self.inp[self.position]
+            self.position += 1
+            
+        return int(result);
     def get_next_token(self):
         """Lexical analyzer (also known as scanner or tokenizer)
         
@@ -71,8 +78,7 @@ class Interpreter(object):
         current_char = inp[self.position]
 
         if current_char.isdigit():
-            token = Token(INTEGER,int(current_char))
-            self.position += 1
+            token = Token(INTEGER,self.integer())
             return token
         elif current_char == '+':
             token = Token(PLUS,"+")
@@ -131,19 +137,12 @@ class Interpreter(object):
         #set current token to the first token taken from input
         self.current_token = self.get_next_token()
 
-        left = str(self.assign(self.current_token,INTEGER)) #we can suppose it's int as we did so far
+        left = self.current_token
+
+        self.eat(INTEGER) #we can suppose it's int as we did so far
         
         #cosume all integer tokens, append it to left string, and exit the loop, this while condition is to check if left is int token..
-        while self.current_token.type == INTEGER:
-            self.eat([
-                INTEGER
-                ])
-            #since eat changes the current token, we need to lookup again
-            if(self.current_token.type == INTEGER):
-                left += str(self.current_token.value)
-            else:
-                break
-
+ 
         print("Passed left section {token}".format(
             token=left
             ))
@@ -153,16 +152,8 @@ class Interpreter(object):
         self.eat([PLUS,MINUS,MULTYPLY,DIVIDE])
         print("Passed operation section {token}".format(token=operation.value))
         #and then again single digit number
-        right = str(self.assign(self.current_token,INTEGER))
-        
-        while self.current_token.type == INTEGER:
-            self.eat([
-                INTEGER
-                ])
-            if(self.current_token.type == INTEGER):
-                right += str(self.current_token.value)
-            else:
-                break
+        right = self.current_token
+        self.eat(INTEGER)
 
         print("Passed right section {token}".format(
             token=right
@@ -173,7 +164,7 @@ class Interpreter(object):
         #return the result of adding two integers, thus
         #effectivly interpreting client inptu
 
-        return ops[operation.value](int(left),int(right))
+        return ops[operation.value](int(left.value),int(right.value))
         
 
 #our program main entry point
@@ -209,13 +200,13 @@ def main():
         interpreter = Interpreter(inp)
         
         # Chekc for parsing errors 
-        try:
-            result = interpreter.expr()
+        #try:
+        result = interpreter.expr()
         #If we end up here, we're cool :) 
-            print(result)
-        except Exception as e:
+        print(result)
+       # except Exception as e:
             #We'll print the exception
-            print(str(e))
+       #     print(str(e))
         
 
 """
