@@ -1,4 +1,5 @@
 from __future__ import division
+#from collection import deque
 import operator
 
 
@@ -12,16 +13,26 @@ INTEGER,PLUS,EOF,MINUS,MULTYPLY,DIVIDE = 'INTEGER','PLUS','EOF','MINUS','MULTYPL
 ops = {
         '+':operator.add,
         '-':operator.sub,
-        '*':operator.mul,
+        '*':lambda x,y: x*y,
         '/':lambda x,y: x/y
       }
 
+token_indexer = 0
+
 class Token(object):
     def __init__(self,type,value):
+        global token_indexer
         #token type : INTEGER PLUS OR EOf
         self.type = type
         #token value is a single digit number, or '+', or None
         self.value = value;
+
+        self.index = token_indexer
+
+        token_indexer += 1
+    #this is neat thing I didn't know about..
+    def __eq__(self, other):
+        return self.type == other.type
 
     def __str__(self):
         """ String representation of the class instance.
@@ -48,10 +59,31 @@ class Interpreter(object):
         self.inp = inp
         self.position = 0
         self.current_token = None
+        self.current_char = self.inp[self.position]
 
-    def error(self):
-        raise Exception('Error parsing input')
+    def error(self,recursion=False):
+        error_message = "Error parsing input"
+        if recursion:
+            error_message += " maximum recursion depth reached"
 
+        raise Exception(error_message)
+
+
+    def advance(self):
+        """ Advance the `position` pointer and set current_char variable"""
+        self.position += 1
+        if self.position > len(self.inp) - 1:
+            self.current_char = None
+        else:
+            self.current_char = self.inp[self.position]
+
+    def integer(self):
+        result = '';
+        while self.current_char is not None  and self.current_char.isdigit():
+            result += self.current_char
+            self.advance()
+            
+        return int(result);
     def get_next_token(self):
         """Lexical analyzer (also known as scanner or tokenizer)
         
@@ -71,24 +103,23 @@ class Interpreter(object):
         current_char = inp[self.position]
 
         if current_char.isdigit():
-            token = Token(INTEGER,int(current_char))
-            self.position += 1
+            token = Token(INTEGER,self.integer())
             return token
         elif current_char == '+':
+            self.advance()
             token = Token(PLUS,"+")
-            self.position += 1
             return token
         elif current_char == '-':
             token = Token(MINUS,"-")
-            self.position += 1
+            self.advance()
             return token
         elif current_char == '*':
             token = Token(MULTYPLY,"*")
-            self.position += 1
+            self.advance()
             return token
         elif current_char == '/':
             token = Token(DIVIDE,"/")
-            self.position += 1
+            self.advance()
             return token
 
 
@@ -97,16 +128,20 @@ class Interpreter(object):
 
     def consume_whitespace(self):
         #because we add one, and we don't 
-        while self.position < len(self.inp)  and self.inp[self.position] == ' ' :
-            self.position += 1
+        while self.current_char == ' ' :
+            self.advance()
+
+        #print("After consuming whitespaces I have character {character}".format(
+        #        character = self.current_char
+        #    ))
     
 
 
-    def assign(self,token,token_type):
-        if token.type == token_type:
-            return token.value
-        else:
-            self.error()
+    def term(self):
+        """RETURN INTEGER TOKEN  VALUE """
+        token = self.current_token
+        self.eat(INTEGER)
+        return token.value
 
     def eat(self, token_type):
         #compare the current token type with the passed list of
@@ -114,67 +149,76 @@ class Interpreter(object):
         #and assign the next token to the self.current_token
         #otherwise return false;
         
-
         if self.current_token.type in token_type:
+            print("Eating {token}".format(
+                token=self.current_token
+               ))
             self.consume_whitespace()
             self.current_token = self.get_next_token();
-            return True
         else:
-            return False
+            self.error()
+
+    def calculate(self,tokenList,operationToken):
+            index = tokenList.index(operationToken)
+            if index != 0 and index != len(tokenList)-1:
+                a = tokenList[index-1]
+                b = tokenList[index+1]
+                if a.type == INTEGER and b.type==INTEGER:
+                    result = ops[tokenList[index].value](
+                                float(a.value),
+                                float(b.value)
+                            )  
+                    tokenList.insert(index-1,Token(INTEGER,result))
+                    for i in range(index+2,index-1,-1):
+                        del tokenList[i]          
+                    print tokenList
+                else:
+                    self.error()
+            else:
+                self.error()
 
     def expr(self):
-        """expr -> INTEGER PLUS INTEGER"""
+        """Yay. This can now be calles arithmetic expression parser/interpreter """
 
         #add support for SPACES INTEGER SPACES SIGN SPACES INTEGER SPACES...
         self.consume_whitespace()
 
-        #set current token to the first token taken from input
+
         self.current_token = self.get_next_token()
-
-        left = str(self.assign(self.current_token,INTEGER)) #we can suppose it's int as we did so far
-        
-        #cosume all integer tokens, append it to left string, and exit the loop, this while condition is to check if left is int token..
-        while self.current_token.type == INTEGER:
-            self.eat([
-                INTEGER
-                ])
-            #since eat changes the current token, we need to lookup again
-            if(self.current_token.type == INTEGER):
-                left += str(self.current_token.value)
-            else:
+        tokens = []
+        #set current token to the first token taken from input
+        while self.current_token:
+            token = self.current_token
+            self.eat(self.current_token.type)
+            if token.type == EOF:
                 break
+            tokens.append(token)
+    
+        """
+            Analyze */ first, and then we'll do +-
 
-        print("Passed left section {token}".format(
-            token=left
-            ))
-        
-        #then the operation sign
-        operation = self.current_token
-        self.eat([PLUS,MINUS,MULTYPLY,DIVIDE])
-        print("Passed operation section {token}".format(token=operation.value))
-        #and then again single digit number
-        right = str(self.assign(self.current_token,INTEGER))
-        
-        while self.current_token.type == INTEGER:
-            self.eat([
-                INTEGER
-                ])
-            if(self.current_token.type == INTEGER):
-                right += str(self.current_token.value)
-            else:
-                break
+        """
+        temp_result = None
+        result = None
+        has_multiply = False
+        #Order of operations
+        while (Token(MULTYPLY,"*") in tokens or
+               Token(DIVIDE,"*") in tokens):
+           for token in tokens:
+                if(token == Token(MULTYPLY,"*") or
+                   token == Token(DIVIDE,"/")):
+                   self.calculate(tokens,token)
 
-        print("Passed right section {token}".format(
-            token=right
-            ))
-        #After this we have our self.current_token equal to EOF 
-        #at this point INTEGER PLUS INTEGER sequence of tokens
-        #has been successfully found and the method can jus
-        #return the result of adding two integers, thus
-        #effectivly interpreting client inptu
-
-        return ops[operation.value](int(left),int(right))
+        while Token(PLUS,'+') in tokens:
+           self.calculate(tokens,Token(PLUS,'+'))
+        while Token(MINUS,'-') in tokens:
+           self.calculate(tokens,Token(MINUS,'-'))
         
+        print tokens
+
+
+
+
 
 #our program main entry point
 def main():
@@ -209,13 +253,13 @@ def main():
         interpreter = Interpreter(inp)
         
         # Chekc for parsing errors 
-        try:
-            result = interpreter.expr()
+        #try:
+        result = interpreter.expr()
         #If we end up here, we're cool :) 
-            print(result)
-        except Exception as e:
+        #print(result)
+        #except Exception as e:
             #We'll print the exception
-            print(str(e))
+        #    print(str(e))
         
 
 """
