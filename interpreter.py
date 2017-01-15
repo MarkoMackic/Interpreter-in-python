@@ -17,8 +17,8 @@ CB = 'CB'
 EOF = 'EOF'
 
 ops = {
-        '+':operator.add,
-        '-':operator.sub,
+        '+':lambda x,y: x+y,
+        '-':lambda x,y: x-y,
         '*':lambda x,y: x*y,
         '/':lambda x,y: x/y
       }
@@ -39,13 +39,11 @@ class Token(object):
 
     def __str__(self):
         """ String representation of the class instance.
-
         Examples:
             Token(INTEGER,3)
             Token(PLUS,'+')
             **when we end reading of the input**
             Token(EOF,None)
-
         """
 
         return 'Token({type},{value})'.format(
@@ -92,7 +90,6 @@ class Interpreter(object):
         
         This method is responsible for breaking a sentence
          apart into tokens.One token at a time.
-
         """
         inp = self.inp;
 
@@ -187,7 +184,6 @@ class Interpreter(object):
                 We don't need to return anything since
                 we're activly modifiying the current list
                 tokenList.
-
             """
             index = tokenList.index(operationToken)
             if index != 0 and index != len(tokenList)-1:
@@ -223,7 +219,6 @@ class Interpreter(object):
             a single token list, so we can just return
             tokens[0], if we don't have a single token
             raise Exception.
-
         """
         while (Token(MULTYPLY,"*") in tokens or
                Token(DIVIDE,"/") in tokens):
@@ -283,9 +278,7 @@ class Interpreter(object):
             list, and it serves to hold level 0 
             tokens. Token level is defined by
             number of parent braces like this
-
             0 (1 (2 ( 3 (4 (5) 4) 3) 2) 1) 0 (1) (1(2)1) 0
-
             So at the end of our parsing we must have our
             current level set to 0. 
             We go through each token, if token is opening 
@@ -301,7 +294,6 @@ class Interpreter(object):
             we get to level 1 we have the final result of brackets
             calulations.
             Let's take for example
-
             1+(2+3+(5*((3)+3)))
             
             Since 1 and + are level 0 token it is appended
@@ -345,7 +337,6 @@ class Interpreter(object):
             executed result to baseexpr, after that we have baseexpr
             containg simple operations that can be executed with
             calculateExpression.
-
         """
         baseexpr = []
         tree = {}
@@ -410,7 +401,6 @@ def main():
             without reading any data. 
             (N.B.: the file.read() and file.readline() methods return an empty string 
             when they hit EOF.)
-
             """
             break;
         
