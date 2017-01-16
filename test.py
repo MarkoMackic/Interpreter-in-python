@@ -2,50 +2,61 @@ import unittest
 from interpreter import *
 
 class TestInterpreter(unittest.TestCase):
-    def test_expr(self):
-        #test simple expression
+   
+    def test_simple_expr(self):
+
         interpreter = Interpreter("5*5")
         result = interpreter.expr()
         self.assertEqual(float(result),25.0)
 
-        #test space skipping
+    def test_space_skipping(self):
+ 
         interpreter = Interpreter("5   *  7     ")
         result = interpreter.expr()
         self.assertEqual(float(result),35.0)
 
-        #testing order of operations on simple expression
+    def test_order_of_operations(self):
+
         interpreter = Interpreter("5*7/5*5+2-2/2+5")
         result = interpreter.expr()
         self.assertEqual(float(result),41.0)
 
-        #testing order of operations on simple expression
         interpreter = Interpreter("5-5+5")
         result = interpreter.expr()
         self.assertEqual(float(result),5.0)
 
-        #testing braces reduction
+    def test_braces_reduction(self):
+
         interpreter = Interpreter("(((((((((((((((5-5+5)))))))))))))))")
         result = interpreter.expr()
         self.assertEqual(float(result),5.0)
 
-        #testing simple braces calculation
+    def test_brace_calculation(self):
+
         interpreter = Interpreter("6*3+(5+4)/3*4")
         result = interpreter.expr()
         self.assertEqual(float(result),30.0)
 
-        #testing nested braces calculation
+    def test_nested_brace_calculation(self):
+
         interpreter = Interpreter("5*(((4+3*(3-4)/(3-4))*2))")
         result = interpreter.expr()
         self.assertEqual(float(result),70.0)
 
-        #Expected parse faulire
+    def test_unary_operators(self):
+
+        interpreter = Interpreter("--2++3-----2+1")
+        result = interpreter.expr()
+        self.assertEqual(float(result),4.0)
+
+    def test_expected_parce_faulire(self):
+
         interpreter = Interpreter("(((((((((5-5+5)))))))))))))))")
         with self.assertRaises(Exception) as cm:
             print(interpreter.expr())
         self.assertEqual(str(cm.exception), "Error parsing input")
 
-        #Expected parse faulire
-        interpreter = Interpreter("+123 + 4")
+        interpreter = Interpreter("+123 + * 4")
         with self.assertRaises(Exception) as cm:
             print(interpreter.expr())
         self.assertEqual(str(cm.exception), "Error parsing input")
@@ -54,3 +65,4 @@ class TestInterpreter(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

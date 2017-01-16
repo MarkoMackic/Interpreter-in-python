@@ -1,13 +1,28 @@
+
+'''
+Support float division for py2
+'''
+
 from __future__ import division
-#from collection import deque
-import operator
+import sys
 
-#Token types
-#
-#EOF (end of file) token is used to indicate that
-#there is no more input left for lexical analysis
+'''
+    DEBUG_LEVEL
 
-INTEGER = 'INTEGER'
+    0 -> NO_LOGGING
+    1 -> IMPORTANT
+    2 -> INFO 
+'''
+
+DEBUG_LEVEL = 1
+
+
+'''
+    Define tokens types that we can
+    use in our parser
+'''
+
+NUMBER = 'NUMBER'
 PLUS = 'PLUS'
 MINUS = 'MINUS'
 MULTYPLY = 'MULTYPLY'
@@ -16,6 +31,14 @@ OB = 'OB'
 CB = 'CB'
 EOF = 'EOF'
 
+'''
+    Function returns result
+    for operations between numbers
+    x, y
+
+    @param x Number token value
+    @param y Number token value
+'''
 ops = {
         '+':lambda x,y: x+y,
         '-':lambda x,y: x-y,
@@ -23,28 +46,50 @@ ops = {
         '/':lambda x,y: x/y
       }
 
+
+
+'''
+    Logger function
+    Checks if level is less or equal
+    to current DEBUG_LEVEL, and prints
+    output to console
+    
+    @param level Integer of level
+    @param message A message to be print
+'''
+def lprint(message, level):
+    if level <=  DEBUG_LEVEL:
+        print(message)
+
+
 class Token(object):
-    def __init__(self,type,value):
-        #some of token types of above
-        #this will be used for __eq__ method
-        #so we can easily search and compare tokens
-        self.type = type
+    '''
+        Class constructor
 
-        #token value is defined in get_next_token
-        self.value = value;
+        @param t_type Some of the above mentioned token types
+        @param value Value of that token
+    '''
+    def __init__(self,t_type,value):
+        '''
+            Assing type and value to new object instance
+        '''
+        self.type = t_type
+        self.value = value
 
-    #this is neat thing I didn't know about before..
     def __eq__(self, other):
+        '''
+            We'll compare tokens by their type
+            Then if we need we can compare the values
+        '''
         return self.type == other.type
 
     def __str__(self):
-        """ String representation of the class instance.
-        Examples:
-            Token(INTEGER,3)
-            Token(PLUS,'+')
-            **when we end reading of the input**
-            Token(EOF,None)
-        """
+        '''
+            String representation of the class
+            This is called when we print token out
+
+            @return string Token(type,value)
+        '''
 
         return 'Token({type},{value})'.format(
             type = self.type,
@@ -52,122 +97,244 @@ class Token(object):
         )
 
     def __repr__(self):
+        '''
+            Class representation 
+
+            @return String representation of class
+        '''
         return self.__str__()
 
+
+'''
+    Map for single char tokens
+'''
+sct = {
+    '(' : Token(OB,'('),
+    ')' : Token(CB,')'),
+    '+' : Token(PLUS,'+'),
+    '-' : Token(MINUS,'-'),
+    '/' : Token(DIVIDE,'/'),
+    '*' : Token(MULTYPLY,'*')
+}
+
+class ParsingError(Exception):
+    '''
+        Error while parsing
+    '''
+    def __init__(self,message):
+        super(ParsingError, self).__init__(message)
+
+
 class Interpreter(object):
+    '''
+        Finds tokens in stream of
+        input
+    '''
+
     def __init__(self,inp):
-        #client string input, e.g. "3+5"
+        '''
+            Constructor function
+            
+            @parm inp contains user input
+        '''
         self.inp = inp
         self.position = 0
         self.current_token = None
         self.current_char = self.inp[self.position]
-        print("Initializing interpreter with %s"%inp)
+        
+        lprint('Initializing interpreter with {u_inp}'.format(
+            u_inp = inp
+            ), 2)
 
     def error(self):
-        error_message = "Error parsing input"
-        print error_message
-        raise Exception(error_message)
+        '''
+            Error handler for our interpreter
+        '''
+        error_message = 'Error parsing input'
+        raise ParsingError(error_message)
 
 
     def advance(self):
-        """ Advance the `position` pointer and set current_char variable"""
+        '''
+            Advance position of cursor, and
+            set current_char, if we eneded
+            reading stream then set it to None
+        '''
+
         self.position += 1
+
         if self.position > len(self.inp) - 1:
             self.current_char = None
         else:
             self.current_char = self.inp[self.position]
 
-    def integer(self):
+    def number(self):
+        '''
+            Parse number in format 
+            x | x.y where x,y are 
+            integers 
+
+        '''
         result = '';
-        while self.current_char is not None  and self.current_char.isdigit():
+        
+        while(
+            self.current_char is not None and
+            self.current_char.isdigit() or
+            self.current_char == '.'
+            ):
+
             result += self.current_char
             self.advance()
             
-        return int(result);
+        return float(result);
 
     def get_next_token(self):
-        """Lexical analyzer (also known as scanner or tokenizer)
-        
-        This method is responsible for breaking a sentence
-         apart into tokens.One token at a time.
-        """
-        inp = self.inp;
+        '''
+            This method extracts the
+            next token from user input
+            string. If token is invalid
+            error() is called.
 
-        #if self.pos index past the end of the self.inp
-        #if so then return EOF token because there is no
-        #input left to convert into tokens
-  
-        if self.position > len(inp) - 1:
+            @return Token
+
+        '''
+
+        # If we ended the stream return End of file token
+        if self.position > len(self.inp) - 1:
             return Token(EOF,None);
 
-        current_char = inp[self.position]
-
-        if current_char.isdigit():
-            token = Token(INTEGER,self.integer())
-            return token
-        elif current_char == '(':
-            self.advance()
-            token = Token(OB,'(')
-            return token
-        elif current_char == ')':
-            self.advance()
-            token = Token(CB,')')
-            return token
-        elif current_char == '+':
-            self.advance()
-            token = Token(PLUS,"+")
-            return token
-        elif current_char == '-':
-            token = Token(MINUS,"-")
-            self.advance()
-            return token
-        elif current_char == '*':
-            token = Token(MULTYPLY,"*")
-            self.advance()
-            return token
-        elif current_char == '/':
-            token = Token(DIVIDE,"/")
-            self.advance()
+        # Number token
+        if self.current_char.isdigit():
+            token = Token(NUMBER,self.number())
             return token
 
-
+        #Single char token 
+        elif self.current_char in sct:
+            token = sct[self.current_char]
+            self.advance()
+            return token
 
         self.error()
 
     def consume_whitespace(self):
-        #because we add one, and we don't 
+        '''
+            Skip the whitespace characters
+        '''
         while self.current_char == ' ' :
             self.advance()
 
-        #print("After consuming whitespaces I have character {character}".format(
-        #        character = self.current_char
-        #    ))
-    
-
-
-    def term(self):
-        """RETURN INTEGER TOKEN  VALUE """
-        token = self.current_token
-        self.eat(INTEGER)
-        return token.value
-
     def eat(self, token_type):
-        #compare the current token type with the passed list of
-        #token types and if it is inside than 'eat' the current token
-        #and assign the next token to the self.current_token
-        #otherwise return false;
+        '''
+            Eat function is used to confirm
+            the integrity of current token
+            and load the next token
+        '''
         
         if self.current_token.type in token_type:
-           # print("Eating {token}".format(
-           #     token=self.current_token
-           #    ))
+
             self.consume_whitespace()
             self.current_token = self.get_next_token();
         else:
             self.error()
 
+    def unaryOperators(self,tokenList):
+        '''
+            Filter token list to recognize
+            unary operators. 
+            
+            Each char or (chars) in example 
+            represents value of token:
+            
+            @params tokenList List of tokens where
+            unary reducton should occur
+
+            tokenList      = result
+
+            ---+2+----(23) = (-2)+(23)
+            ---*2+(32)     = error
+            ---2*(23)      = (-2)*(23)
+
+        '''
+
+        #list for filtered tokens
+        result = [] 
+
+
+        #last token must be number
+        if tokenList[len(tokenList)-1].type == NUMBER:
+            #operators list
+            operators = []
+            #go through each token
+            for index,token in enumerate(tokenList):
+                if token.type in (PLUS,MINUS):
+                    '''
+                        If current token is + or -
+                        append current token to
+                        operators
+                    '''
+                    operators.append(token)
+                else:
+                    '''
+                        If not, we check if our 
+                        oprators list is not empty
+                    '''
+                    if operators:
+                        #we can start with + sign
+                        sign =  Token(PLUS,'+')
+                        '''
+                            If we have uneven number
+                            of - tokens in list. We can
+                            assume operation is -
+                        '''
+                        if operators.count(
+                            Token(MINUS,'-')
+                        ) % 2 == 1:
+                            sign = Token(MINUS,'-')
+
+                        '''
+                            After combination of +|- tokens
+                            we must have a number
+                        '''
+                        if token.type == NUMBER:
+                            if not result:
+                                '''
+                                    Since we can't have -|+ before 
+                                    expression to solve it by our 
+                                    methods append that minus directly
+                                    to the first number value itself
+                                '''
+                                token.value = float(sign.value +
+                                                    str(token.value))
+                                result.append(token)
+                            else:
+                                '''
+                                    For all other values 
+                                    append sign and number token
+                                '''
+                                result.append(sign)
+                                result.append(token)
+                        else:
+                            self.error()
+
+                        #clear operators list
+                        operators = []
+                    else:
+                        '''
+                            Since we have no + - operatiors
+                            defined before non +|- token, we
+                            just append that token to the 
+                            result.
+                            Input '4*5' is example where this
+                            occurs for each token. 
+                        '''
+                        result.append(token)
+        else:
+            self.error()
+
+        return result
+
     def doOperations(self,tokenList,operationToken):
-            """
+            '''
                 Find first instance of opration token
                 in given list. Check indexes because
                 tokens can't be at beggining and end 
@@ -184,20 +351,29 @@ class Interpreter(object):
                 We don't need to return anything since
                 we're activly modifiying the current list
                 tokenList.
-            """
+
+                @params tokenList Token list where operation should
+                be done
+                @params operation Operation token
+
+                Current tokenList is beeing modified, so this
+                function has no return value
+            '''
             index = tokenList.index(operationToken)
             if index != 0 and index != len(tokenList)-1:
                 a = tokenList[index-1]
                 b = tokenList[index+1]
-                if a.type == INTEGER and b.type==INTEGER:
+                if a.type == NUMBER and b.type==NUMBER:
                     result = ops[tokenList[index].value](
-                                int(a.value),
-                                int(b.value)
+                                a.value,
+                                b.value
                             )  
-                    tokenList.insert(index-1,Token(INTEGER,result))
+                    tokenList.insert(index-1,Token(NUMBER,result))
                     for i in range(index+2,index-1,-1):
                         del tokenList[i]          
-                    #print tokenList
+                    lprint('Token list after operation {tokenl}'.format(
+                            tokenl = tokenList
+                        ), 2)
                 else:
                     self.error()
             else:
@@ -205,25 +381,27 @@ class Interpreter(object):
 
 
     def calculateExpression(self,tokens):
-        """
+        '''
             Do operations on tokens list
             First do multiplication and division, 
             and do them in order.
-            Then we can do addition and subtraction
-            with order too (without order it may
-            use first subtraction, and then addition
-            which may cause undesired effeects)
-            on token list.Since we
-            pass tokens list to doOperations, after
+            Then we can do addition and subtraction.
+            Since we pass tokens list to doOperations, after
             all processes are finished we should have
             a single token list, so we can just return
             tokens[0], if we don't have a single token
             raise Exception.
-        """
-        while (Token(MULTYPLY,"*") in tokens or
-               Token(DIVIDE,"/") in tokens):
-            m_index = len(tokens)+100
-            d_index = len(tokens)+100
+
+            @params tokens Token list on which 
+            operation should be done
+        '''       
+        #PARSE UNARY OPERATORS
+        tokens = self.unaryOperators(tokens)
+        
+        while (Token(MULTYPLY,'*') in tokens or
+               Token(DIVIDE,'/') in tokens):
+            m_index = len(tokens)
+            d_index = len(tokens)
             if Token(MULTYPLY,'*') in tokens:
                 m_index = tokens.index(Token(MULTYPLY,'*'))
             if Token(DIVIDE,'/') in tokens:
@@ -234,10 +412,10 @@ class Interpreter(object):
             else:
                 self.doOperations(tokens,Token(MULTYPLY,'*'))
 
-        while (Token(PLUS,"+") in tokens or
-               Token(MINUS,"-") in tokens):
-            p_index = len(tokens)+100
-            m_index = len(tokens)+100
+        while (Token(PLUS,'+') in tokens or
+               Token(MINUS,'-') in tokens):
+            p_index = len(tokens)
+            m_index = len(tokens)
             if Token(PLUS,'+') in tokens:
                 p_index = tokens.index(Token(PLUS,'+'))
             if Token(MINUS,'-') in tokens:
@@ -255,14 +433,15 @@ class Interpreter(object):
             self.error();
 
     def expr(self):
-        """Yay. This can now be calles arithmetic expression parser/interpreter """
+        
 
-        #add support for SPACES INTEGER SPACES SIGN SPACES INTEGER SPACES...
         self.consume_whitespace()
 
         self.current_token = self.get_next_token()
+
         tokens = []
-        #set current token to the first token taken from input
+
+        #parse all tokens from the input stream
         while self.current_token:
             token = self.current_token
             self.eat(self.current_token.type)
@@ -271,7 +450,7 @@ class Interpreter(object):
             tokens.append(token)
     
         
-        """
+        '''
             Now we have digged a bit deeper.
             Our so called 'calculator' interpreter
             can accept braces. We have baseexpr 
@@ -337,7 +516,8 @@ class Interpreter(object):
             executed result to baseexpr, after that we have baseexpr
             containg simple operations that can be executed with
             calculateExpression.
-        """
+        '''
+
         baseexpr = []
         tree = {}
         level = 0
@@ -349,11 +529,10 @@ class Interpreter(object):
                 continue
             elif token == Token('CB',')'):
                 if tree:
-                    #print "HERE IS A TREE - %r"%tree
+        
                     keys = sorted(tree.keys(),reverse=True)
                     result = self.calculateExpression(tree[keys[0]])
                     if level > 0:
-                        #print tree
                         if (level-1) in tree:
                             tree[level-1].append(result)
                         else:
@@ -362,7 +541,7 @@ class Interpreter(object):
                         del tree[level]
                    
                     else:
-                        print "FAILING"
+                        lprint('Failing on braces evaluation',1)
                         self.error()
     
                 if level == 1:
@@ -371,9 +550,11 @@ class Interpreter(object):
 
                 level -= 1
                 continue
+
             if level == 0:
                 baseexpr.append(token)
                 continue
+
             if level not in tree:
                 tree[level]=[token]
             else:
@@ -382,32 +563,43 @@ class Interpreter(object):
 
         if level != 0:
             self.error()
-        #print baseexpr
+
         result = self.calculateExpression(baseexpr).value
-        print("Result from interpretation is %s"%result)
+        lprint('Result from interpretation is {res}'.format(
+            res=result), 3)
         return result
 
-#our program main entry point
+
 def main():
+    '''
+        Our program main entry point
+    '''
     while True:
         try:
-          
-            inp = raw_input('calc > ')
+            v_major = sys.version_info.major
+            inp = ''
+            if v_major == 3:
+                inp = input('calc > ')
+            elif v_major == 2:
+                inp = raw_input('calc > ')
+            else:
+                raise Exception("Python version not supported")
         except EOFError:     
-            """exception EOFError
+            '''
+            exception EOFError
       
             Raised when one of the built-in functions
             (input() or raw_input()) hits an end-of-file condition (EOF)
             without reading any data. 
             (N.B.: the file.read() and file.readline() methods return an empty string 
             when they hit EOF.)
-            """
+            '''
             break;
         
         except KeyboardInterrupt:
-            """User exited program  """
+            '''User exited program  '''
 
-            print("\nBye bye")
+            print('\nBye bye')
             break;
 
         if not inp:
@@ -418,19 +610,15 @@ def main():
         
         interpreter = Interpreter(inp)
     
-        # Chekc for parsing errors 
-        #try:
-        result = interpreter.expr()
-        #If we end up here, we're cool :) 
-        print(result)
-        #except Exception as e:
+        # Check for parsing errors 
+        try:
+            result = interpreter.expr()
+            #If we end up here, we're cool :) 
+            print(result)
+        except ParsingError as e:
             #We'll print the exception
-        #    print(str(e))
+            print(str(e))
         
-
-"""
-For python3 change raw_input to input .. 
-"""
 
 if __name__ == '__main__':
     main()
