@@ -7,7 +7,9 @@ work. It's a great tutorial :)
 
 ##My code 
 
-My code is contained in `interpreter.py` file and it's created by me doing homework from tutorial. It runs braces evaluation using token level dictonary , and then evaluates each level starting from the top down. After final brace is closed it's appended to basic expression variable.It does a unary operators parsing, and basic expression parsing. My solving methods modify tokens list, and there are insertion to list at specific indexes, so method is slower then the code from the tutorial. But it was my logic, and I've done it without exact plan. 
+My code is contained in `interpreter.py` file and it's created by me doing homework from tutorial. It runs braces evaluation using token level dictonary , and then evaluates each level starting from the top down. After final brace is closed it's appended to basic expression variable.It does a unary operators parsing, and basic expression parsing. My solving methods modify tokens list, and there are insertion to list at specific indexes, so method is slower then the code from the tutorial. 
+
+Now added
 
 ##Tutorial code 
 
@@ -66,9 +68,8 @@ AST can be twice faster. But for creating the algorithms from my head, I'm very 
 
 ##Contribution
 
-Now I'm looking forward to implement math functions like sin,cos,tan,etc. 
-If you want to help, be free to open pull requests for anything you add/remove from
-the code :) 
+Now I'm looking forward to implement all math functions (sin,cos,tan,ctg are already implemented in my code) ,etc. 
+If you want to help, be free to open pull requests for anything you add/remove from the code :) 
 Porting this interpreter to JS wouldn't be bad idea.
 
 
