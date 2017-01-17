@@ -11,7 +11,7 @@ My code is contained in `interpreter.py` file and it's created by me doing homew
 
 ##Tutorial code 
 
-Tutorial code is currently in `interpreter_ast.py` and it's based on tutorial. At current stage, it builds up AST (Abstract syntax tree) from expression with sequential applying of syntax grammer rules, and evaluates it with NodeVisitor, recursively bulding result. It currently doesn't support unary operators, but it's easy to implement.
+Tutorial code is currently in `interpreter_ast.py` and it's based on tutorial. At current stage, it builds up AST (Abstract syntax tree) from expression with sequential applying of syntax grammer rules, and evaluates it with NodeVisitor, recursively building result. It currently doesn't support unary operators, but it's easy to implement, and I'll implement it soon.
 
 
 ##Tests

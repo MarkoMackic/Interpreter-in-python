@@ -1,9 +1,13 @@
 import unittest
 from interpreter import *
 import time
+from math import *
+
+sample_number = 1000
 
 class TestInterpreter(unittest.TestCase):
-   
+
+
     def test_simple_expr(self):
 
         interpreter = Interpreter("5*5")
@@ -62,8 +66,8 @@ class TestInterpreter(unittest.TestCase):
             print(interpreter.expr())
         self.assertEqual(str(cm.exception), "Error parsing input")
        
-    def test_speed(self):
-        sample_number = 1000
+    def test_speed_expression(self):
+   
 
         start = time.time()
         for _ in range(sample_number):
@@ -74,7 +78,17 @@ class TestInterpreter(unittest.TestCase):
             num_runs = 1000,
             ttime = (time.time() - start)*1000))   
        
+    def test_speed_math_functions(self):
+   
 
+        start = time.time()
+        for _ in range(sample_number):
+             interpreter = Interpreter("sin(2) * sin(2) -- sin   5    +  10 * 11")
+             result = interpreter.expr()
+        self.assertEqual(round(result,5),round(109.867897536,5))
+        print('\nTiming for {num_runs} runs of interpretation is {ttime}ms\n'.format(
+            num_runs = 1000,
+            ttime = (time.time() - start)*1000))   
 if __name__ == "__main__":
     unittest.main()
 

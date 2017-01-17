@@ -1,9 +1,12 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 '''
 Support float division for py2
 '''
 
 from __future__ import division
+from math import sin,cos,tan,radians,degrees
 import sys
 
 '''
@@ -28,7 +31,10 @@ MULTYPLY = 'MULTYPLY'
 DIVIDE = 'DIVIDE'
 OB = 'OB'
 CB = 'CB'
+
+
 EOF = 'EOF'
+
 
 '''
     Function returns result
@@ -42,7 +48,11 @@ ops = {
         '+':lambda x,y: x+y,
         '-':lambda x,y: x-y,
         '*':lambda x,y: x*y,
-        '/':lambda x,y: x/y
+        '/':lambda x,y: x/y,
+        'sin': lambda x: sin(x),
+        'cos': lambda x: cos(x),
+        'tan': lambda x: tan(x),
+        'ctg': lambda x: 1/tan(x)
       }
 
 
@@ -60,6 +70,13 @@ def lprint(message, level):
     if level <=  DEBUG_LEVEL:
         print(message)
 
+def tokenListPrettyPrint(token_list,level):
+    if level <= DEBUG_LEVEL:
+        print('[')
+        for token in token_list:
+            print('  ' + str(token) + ',')
+        print(']')
+
 
 class Token(object):
     '''
@@ -68,7 +85,7 @@ class Token(object):
         @param t_type Some of the above mentioned token types
         @param value Value of that token
     '''
-    def __init__(self,t_type,value):
+    def __init__(self,t_type,value = None):
         '''
             Assing type and value to new object instance
         '''
@@ -115,6 +132,33 @@ sct = {
     '/' : Token(DIVIDE,'/'),
     '*' : Token(MULTYPLY,'*')
 }
+
+
+
+
+'''
+    Map for string tokens
+'''
+
+mct = {
+    'number_tokens':{
+        'tan' : {
+            'parseMethod' : lambda parser: parser.parseMathFunction
+        },
+        'sin' : {
+             'parseMethod' : lambda parser: parser.parseMathFunction
+        },
+        'cos' : {
+             'parseMethod' : lambda parser: parser.parseMathFunction
+        },
+        'ctg' : {
+             'parseMethod' : lambda parser: parser.parseMathFunction
+        }
+    } 
+}
+
+
+
 
 class ParsingError(Exception):
     '''
@@ -170,7 +214,7 @@ class Interpreter(object):
     def number(self):
         '''
             Parse number in format 
-            x | x.y where x,y are 
+            (-)x | x.y where x,y are 
             integers 
 
         '''
@@ -179,13 +223,124 @@ class Interpreter(object):
         while(
             self.current_char is not None and
             self.current_char.isdigit() or
-            self.current_char == '.'
+            self.current_char == '.' or
+            (self.current_char == '-' and 
+            self.inp[self.position-1].isdigit() != True)
             ):
 
             result += self.current_char
             self.advance()
             
         return float(result);
+
+    def parseMathFunction(self,function_name,arg_num = 2):
+        '''
+            This method is called as the parser 
+            recognized the 
+
+
+            @params function_name Name of a math function from mct
+            @params arg_num For possible future use
+        '''
+        # Consume all whitespaces before number of (
+        self.consume_whitespace()
+        
+        #State machine for using brackets
+        useBrackets = False
+
+        if self.current_char == '(':
+            '''
+                Advance one position, and
+                consume whitespaces to number
+            '''
+            useBrackets = True
+            self.advance()
+            self.consume_whitespace()
+
+        '''
+            Take number argument and 
+            create a number Token, set 
+            token value to sin(rad) by 
+            default
+        '''
+        argument = self.number()
+        token = Token(NUMBER)
+        token.value = ops[function_name](argument)
+
+        '''
+            If we use brackets, we can
+            specify second argument to
+            function, and that is, what
+            unit is argument expresses
+            in
+        '''
+        if useBrackets:
+            #This means we have second parameter
+            if self.current_char == ',':
+                '''
+                    Skip , character
+                    consume whitespace to argument
+                    peek into it, evaluate and 
+                    set new token value if deg is  
+                    used
+                '''
+                self.advance()
+                self.consume_whitespace()
+
+                peek = self.inp[self.position:self.position+3].lower()
+
+                if peek in ('deg','rad'):
+                    if peek == 'deg':
+                       #Round thing up to couple of decimals
+                       token.value = round(ops[function_name](
+                            radians(round(argument, 2))
+                            ), 2)
+                    '''
+                        Skip three chars
+                        we used for argument
+                    '''
+                    for i in range(3):
+                        self.advance()
+                else:
+                    self.error()
+            '''
+                Consume whitespace to )
+                and advance 
+            '''
+            self.consume_whitespace()
+            if self.current_char != ')':
+                self.error()
+            self.advance()
+
+       
+        return token
+
+
+    def multiCharToken(self):
+        #start by searching with current token
+        result = self.current_char
+
+        #go trough all token types
+        for token_type in mct:
+            #and through all tokenstr representations
+            for tokenstr in mct[token_type].keys():
+                '''
+                    While result is in current
+                    token string representation
+                    and not equal to any, load 
+                    next token, and if it is 
+                    equal return parsed token
+                '''
+                while result in tokenstr:
+                    if tokenstr == result:
+                       self.advance()
+                       return mct[token_type][tokenstr]['parseMethod'](self)(tokenstr)
+                       break
+                    self.advance()
+                    result += self.current_char
+                   
+        return False
+
 
     def get_next_token(self):
         '''
@@ -212,6 +367,11 @@ class Interpreter(object):
             token = sct[self.current_char]
             self.advance()
             return token
+        else:
+            token = self.multiCharToken()  
+            if token:
+                return token
+
 
         self.error()
 
@@ -302,8 +462,10 @@ class Interpreter(object):
                                     methods append that sign directly
                                     to the first number value itself
                                 '''
-                                token.value = float(sign.value +
-                                                    str(token.value))
+                               
+                                if sign == Token(MINUS,'-'):
+                                    token.value = -token.value
+                                                                       
                                 result.append(token)
                             else:
                                 '''
@@ -329,6 +491,10 @@ class Interpreter(object):
                         result.append(token)
         else:
             self.error()
+
+
+        lprint("After filtering unary ops, we have",2)
+        tokenListPrettyPrint(result,2)
 
         return result
 
@@ -373,9 +539,9 @@ class Interpreter(object):
                     tokenList.insert(index-1,Token(NUMBER,result))
                     for i in range(index+2,index-1,-1):
                         del tokenList[i]          
-                    lprint('Token list after operation {tokenl}'.format(
-                            tokenl = tokenList
-                        ), 2)
+
+                    lprint("Token list after operation",2)
+                    tokenListPrettyPrint(tokenList,2)
                 else:
                     self.error()
             else:
@@ -435,6 +601,7 @@ class Interpreter(object):
         else:
             self.error();
 
+
     def expr(self):
         
 
@@ -451,7 +618,10 @@ class Interpreter(object):
             if token.type == EOF:
                 break
             tokens.append(token)
-    
+
+        #informatice things
+        lprint("Token list at beginning",2)
+        tokenListPrettyPrint(tokens,2)
         
         '''
             Now we have digged a bit deeper.
@@ -567,9 +737,12 @@ class Interpreter(object):
         if level != 0:
             self.error()
 
+        lprint('After braces reduction',2)
+        tokenListPrettyPrint(baseexpr,2)
+        
         result = self.calculateExpression(baseexpr).value
         lprint('Result from interpretation is {res}'.format(
-            res=result), 3)
+            res=result),2)
         return result
 
 
@@ -619,27 +792,8 @@ def main():
             #We'll print the exception
             print(str(e))
 
-        if TIMEIT:
-
-            start = time.time()
-            for _ in range(1000):   
-                interpreter = Interpreter(inp)
-                # Check for parsing errors 
-                try:
-                    result = interpreter.expr()
-                    #If we end up here, we're cool :) 
-                    #print(result)
-                except ParsingError as e:
-                    pass
-                    #We'll print the exception
-                    #print(str(e))
-                
-        
-          
       
-            print('Timing for {num_runs} runs of interpretation is {ttime}ms'.format(
-                 num_runs = 1000,
-                 ttime = (time.time() - start)*1000))
+ 
 
 if __name__ == '__main__':
     main()
