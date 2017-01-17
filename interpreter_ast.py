@@ -1,210 +1,214 @@
-from __future__ import division
-import pprint
+""" SPI - Simple Pascal Interpreter """
 
-INT = 'int'
-PLUS = 'plus'
-MINUS = 'minus'
-MUL = 'mul'
-DIV = 'div'
-OB = 'ob'
-CB = 'cb'
-EOF = 'EOF'
+###############################################################################
+#                                                                             #
+#  LEXER                                                                      #
+#                                                                             #
+###############################################################################
 
-
-DEBUG =  False
-class AST(object):
-	"""Abstract syntax tree"""
-	pass
-
-class BinOp(AST):
-	def __init__(self,left,op,right):
-		self.left = left
-		self.op = op
-		self.right = right
-	def __str__(self):
-		"""
-			String representation  of the class
-		"""
-		return "BinOP({left}-{op}-{right})".format(
-				left = self.left,
-				op = self.op,
-				right = self.right
-			)
-	def __repr__(self):
-		"""
-			Representation of the class
-		"""
-		return self.__str__()
-class Num(AST):
-	def __init__(self,token):
-		self.token = token
-		self.value = token.value
-		
+# Token types
+#
+# EOF (end-of-file) token is used to indicate that
+# there is no more input left for lexical analysis
+INTEGER, PLUS, MINUS, MUL, DIV, LPAREN, RPAREN, EOF = (
+    'INTEGER', 'PLUS', 'MINUS', 'MUL', 'DIV', '(', ')', 'EOF'
+)
 
 class Token(object):
+    def __init__(self, type, value):
+        self.type = type
+        self.value = value
 
-	def __init__(self,token_type,value):
-		"""
-			Token is object that has type
-			and value.
-		"""
-		self.type = token_type
-		self.value = value
+    def __str__(self):
+        """String representation of the class instance.
+        Examples:
+            Token(INTEGER, 3)
+            Token(PLUS, '+')
+            Token(MUL, '*')
+        """
+        return 'Token({type}, {value})'.format(
+            type=self.type,
+            value=repr(self.value)
+        )
 
-	def __str__(self):
-		"""
-			String representation  of the class
-		"""
-		return "Token({tip},{vrijednost})".format(
-				tip  = self.type,
-				vrijednost = self.value
-			)
-	def __repr__(self):
-		"""
-			Representation of the class
-		"""
-		return self.__str__()
+    def __repr__(self):
+        return self.__str__()
 
-	def __eq__(self,other):
-		return self.type == other.type
 
-single_token_mapper={
-	'+':Token(PLUS,'+'),
-	'-':Token(MINUS,'-'),
-	'*':Token(MUL,'*'),
-	'/':Token(DIV,'/'),
-	'(':Token(OB,'('),
-	')':Token(CB,')')
-}
+class Lexer(object):
+    def __init__(self, text):
+        # client string input, e.g. "4 + 2 * 3 - 6 / 2"
+        self.text = text
+        # self.pos is an index into self.text
+        self.pos = 0
+        self.current_char = self.text[self.pos]
 
-ops = {
-	'+':lambda x,y:x+y,
-	'-':lambda x,y:x-y,
-	'*':lambda x,y:x*y,
-	'/':lambda x,y:x/y
-}
+    def error(self):
+        raise Exception('Invalid character')
 
-class ParsingError(Exception):
-	""" Error while parsing"""
-	def __init__(self,message):
-	    super(ParsingError, self).__init__(message)
+    def advance(self):
+        """Advance the `pos` pointer and set the `current_char` variable."""
+        self.pos += 1
+        if self.pos > len(self.text) - 1:
+            self.current_char = None  # Indicates end of input
+        else:
+            self.current_char = self.text[self.pos]
+
+    def skip_whitespace(self):
+        while self.current_char is not None and self.current_char.isspace():
+            self.advance()
+
+    def integer(self):
+        """Return a (multidigit) integer consumed from the input."""
+        result = ''
+        while self.current_char is not None and self.current_char.isdigit():
+            result += self.current_char
+            self.advance()
+        return int(result)
+
+    def get_next_token(self):
+        """Lexical analyzer (also known as scanner or tokenizer)
+        This method is responsible for breaking a sentence
+        apart into tokens. One token at a time.
+        """
+        while self.current_char is not None:
+
+            if self.current_char.isspace():
+                self.skip_whitespace()
+                continue
+
+            if self.current_char.isdigit():
+                return Token(INTEGER, self.integer())
+
+            if self.current_char == '+':
+                self.advance()
+                return Token(PLUS, '+')
+
+            if self.current_char == '-':
+                self.advance()
+                return Token(MINUS, '-')
+
+            if self.current_char == '*':
+                self.advance()
+                return Token(MUL, '*')
+
+            if self.current_char == '/':
+                self.advance()
+                return Token(DIV, '/')
+
+            if self.current_char == '(':
+                self.advance()
+                return Token(LPAREN, '(')
+
+            if self.current_char == ')':
+                self.advance()
+                return Token(RPAREN, ')')
+
+            self.error()
+
+        return Token(EOF, None)
+
+
+###############################################################################
+#                                                                             #
+#  PARSER                                                                     #
+#                                                                             #
+###############################################################################
+
+class AST(object):
+    pass
+
+
+class BinOp(AST):
+    def __init__(self, left, op, right):
+        self.left = left
+        self.token = self.op = op
+        self.right = right
+
+
+class Num(AST):
+    def __init__(self, token):
+        self.token = token
+        self.value = token.value
+
 
 class Parser(object):
-	"""
-		Our arithmethic expression calculator
-	"""
-	def __init__(self,inp):
+    def __init__(self, lexer):
+        self.lexer = lexer
+        # set current token to the first token taken from the input
+        self.current_token = self.lexer.get_next_token()
 
-		self.inp = inp
-		self.pos = 0
-		self.current_char = inp[0]
-		self.current_token = self.getNextToken()
+    def error(self):
+        raise Exception('Invalid syntax')
 
+    def eat(self, token_type):
+        # compare the current token type with the passed token
+        # type and if they match then "eat" the current token
+        # and assign the next token to the self.current_token,
+        # otherwise raise an exception.
+        if self.current_token.type == token_type:
+            self.current_token = self.lexer.get_next_token()
+        else:
+            self.error()
 
-	def error(self,message = "Error in parsing"):
-		print message
-		raise ParsingError(message)
+    def factor(self):
+        """factor : INTEGER | LPAREN expr RPAREN"""
+        token = self.current_token
+        if token.type == INTEGER:
+            self.eat(INTEGER)
+            return Num(token)
+        elif token.type == LPAREN:
+            self.eat(LPAREN)
+            node = self.expr()
+            self.eat(RPAREN)
+            return node
 
-	def advance(self):
-		if self.pos < len(self.inp)-1:
-			self.pos += 1
-			self.current_char = self.inp[self.pos]
-			if DEBUG:
-				print(r"""Advancing to position {pos}
-and setting current char to {char}""".format(
-				         	pos = self.pos,
-				         	char = self.current_char
-				     ))
-		else:
-			self.current_char = ""
-			
-	def skip_whitespace(self):
-		while self.current_char.isspace():
-			self.advance()
+    def term(self):
+        """term : factor ((MUL | DIV) factor)*"""
+        node = self.factor()
 
-	def getNextToken(self):
+        while self.current_token.type in (MUL, DIV):
+            token = self.current_token
+            if token.type == MUL:
+                self.eat(MUL)
+            elif token.type == DIV:
+                self.eat(DIV)
 
-	
-		if self.current_char == ' ':
-			self.skip_whitespace()
-		if self.current_char.isdigit():
-			token = Token(INT,self.number())
-			return token
-		if self.current_char in single_token_mapper:
-			token = single_token_mapper[self.current_char]
-			self.advance()
-			return token
-		if self.pos > len(self.inp) - 1 or not self.current_char:
-			token = Token(EOF,None)
-			return token
+            node = BinOp(left=node, op=token, right=self.factor())
 
-		self.error()
+        return node
 
-	def factor(self):
-		token = self.current_token
-		if token.type == INT:
-			self.eat([INT])
-			return Num(token)
-		elif token.type == OB:
-			self.eat([OB])
-			node = self.expr()
-			self.eat([CB])
-			return node
-		
-	
+    def expr(self):
+        """
+        expr   : term ((PLUS | MINUS) term)*
+        term   : factor ((MUL | DIV) factor)*
+        factor : INTEGER | LPAREN expr RPAREN
+        """
+        node = self.term()
 
-	def term(self):
-		node = self.factor()
-		#print "In term current token is %s"%self.current_token
-		while self.current_token.type in (DIV,MUL):
-				token = self.current_token
-				self.eat([DIV,MUL])
-				node = BinOp(node,token,self.factor())
-		return node
-				
-			
-			
+        while self.current_token.type in (PLUS, MINUS):
+            token = self.current_token
+            if token.type == PLUS:
+                self.eat(PLUS)
+            elif token.type == MINUS:
+                self.eat(MINUS)
 
-	def eat(self, TokenType):
-		"""
-			Check that TokenType is 
-			current_token.type, if not
-			raise Exception.
-		"""
-		if self.current_token.type in TokenType:
-			self.current_token = self.getNextToken()
-			
-		else:
-			self.error()
-	def expr(self):
-		"""
+            node = BinOp(left=node, op=token, right=self.term())
 
-			expr = term (PLUS|MINUS) term
-			term = factor (*|/) factor
-			factor = int | ob[(] expr cb[)]
-		"""
-		node = self.term()
-		while self.current_token.type in (PLUS,MINUS):
-			token = self.current_token
-			self.eat([PLUS,MINUS])
-			node = BinOp(node,token,self.term())
-			
+        return node
 
-		return node
+    def parse(self):
+        node = self.expr()
+        if self.current_token.type != EOF:
+            self.error()
+        return node
 
 
-
-	def number(self):
-		result = ''
-		while (self.current_char.isdigit() or
-			   self.current_char == '.'):
-			if DEBUG:
-				print("Appending to int token {digit}".format(
-						digit = self.current_char
-					))
-			result += self.current_char
-			self.advance()
-		return float(result)
+###############################################################################
+#                                                                             #
+#  INTERPRETER                                                                #
+#                                                                             #
+###############################################################################
 
 class NodeVisitor(object):
     def visit(self, node):
@@ -215,9 +219,10 @@ class NodeVisitor(object):
     def generic_visit(self, node):
         raise Exception('No visit_{} method'.format(type(node).__name__))
 
+
 class Interpreter(NodeVisitor):
-    def __init__(self, tree):
-        self.tree = tree
+    def __init__(self, parser):
+        self.parser = parser
 
     def visit_BinOp(self, node):
         if node.op.type == PLUS:
@@ -233,26 +238,27 @@ class Interpreter(NodeVisitor):
         return node.value
 
     def interpret(self):
-    	#here we have our full tree
-        return self.visit(self.tree)
+        tree = self.parser.parse()
+        return self.visit(tree)
+
 
 def main():
+    while True:
+        try:
+            try:
+                text = raw_input('spi> ')
+            except NameError:  # Python3
+                text = input('spi> ')
+        except EOFError:
+            break
+        if not text:
+            continue
 
-	while True:
-
-		inp = raw_input("expr > ")
-		if inp:
-			parser = Parser(inp)
-			try:
-				result = parser.expr()
-				interpreter = Interpreter(result)
-				print(interpreter.interpret())
-			except ParsingError as e:
-				print(str(e))
-		else:
-			print("Please enter a valid ")
-
-
+        lexer = Lexer(text)
+        parser = Parser(lexer)
+        interpreter = Interpreter(parser)
+        result = interpreter.interpret()
+        print(result)
 
 if __name__ == '__main__':
-	main()
+    main()

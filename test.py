@@ -1,5 +1,6 @@
 import unittest
 from interpreter import *
+import time
 
 class TestInterpreter(unittest.TestCase):
    
@@ -49,7 +50,7 @@ class TestInterpreter(unittest.TestCase):
         result = interpreter.expr()
         self.assertEqual(float(result),4.0)
 
-    def test_expected_parce_faulire(self):
+    def test_expected_parse_faulire(self):
 
         interpreter = Interpreter("(((((((((5-5+5)))))))))))))))")
         with self.assertRaises(Exception) as cm:
@@ -61,7 +62,18 @@ class TestInterpreter(unittest.TestCase):
             print(interpreter.expr())
         self.assertEqual(str(cm.exception), "Error parsing input")
        
-        
+    def test_speed(self):
+        sample_number = 1000
+
+        start = time.time()
+        for _ in range(sample_number):
+             interpreter = Interpreter("(18/2)*(((9 * 9 - 1)/ 2)-(5 * 20 - (7 * 9 - 2)))")
+             result = interpreter.expr()
+        self.assertEqual(result,9.0)
+        print('\nTiming for {num_runs} runs of interpretation is {ttime}ms\n'.format(
+            num_runs = 1000,
+            ttime = (time.time() - start)*1000))   
+       
 
 if __name__ == "__main__":
     unittest.main()

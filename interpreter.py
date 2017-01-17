@@ -16,7 +16,6 @@ import sys
 
 DEBUG_LEVEL = 1
 
-
 '''
     Define tokens types that we can
     use in our parser
@@ -604,16 +603,13 @@ def main():
             '''User exited program  '''
 
             print('\nBye bye')
+
             break;
 
         if not inp:
             continue
 
-        #after we ashured we have some input we can init our
-        #interpreter
-        
         interpreter = Interpreter(inp)
-    
         # Check for parsing errors 
         try:
             result = interpreter.expr()
@@ -622,7 +618,28 @@ def main():
         except ParsingError as e:
             #We'll print the exception
             print(str(e))
+
+        if TIMEIT:
+
+            start = time.time()
+            for _ in range(1000):   
+                interpreter = Interpreter(inp)
+                # Check for parsing errors 
+                try:
+                    result = interpreter.expr()
+                    #If we end up here, we're cool :) 
+                    #print(result)
+                except ParsingError as e:
+                    pass
+                    #We'll print the exception
+                    #print(str(e))
+                
         
+          
+      
+            print('Timing for {num_runs} runs of interpretation is {ttime}ms'.format(
+                 num_runs = 1000,
+                 ttime = (time.time() - start)*1000))
 
 if __name__ == '__main__':
     main()
