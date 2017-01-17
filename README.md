@@ -56,8 +56,11 @@ OK
 
 ```
 
-So in conclusion comparing best cases from a couple of test runs on a comuter.
-AST can be twice faster.
+##Conclusion
+
+So in conclusion comparing best cases from a couple of test ran on my comuter.
+AST can be twice faster. But for creating the algorithms from my head, I'm very proud of my interpreter :) 
+
 
 
 
