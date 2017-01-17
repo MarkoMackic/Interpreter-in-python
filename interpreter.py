@@ -335,16 +335,19 @@ class Interpreter(object):
 
     def doOperations(self,tokenList,operationToken):
             '''
+                Single operation between 2 numbers.
+
+
                 Find first instance of opration token
                 in given list. Check indexes because
                 tokens can't be at beggining and end 
                 of basic expressions. Check nearby
-                tokens for integers, so we don't have
+                tokens for numbers, so we don't have
                 situation like // ++ or +( or anything
                 like that. Do operations on numbers,
                 insert at a place of the left number 
                 in list, then delete tokens used including
-                both integers and operation sign from right
+                both numbers and operation sign from right
                 to left, so we don't have problems with
                 indexes, and finish up.If anything is blown
                 raise Exception. 
@@ -382,7 +385,8 @@ class Interpreter(object):
 
     def calculateExpression(self,tokens):
         '''
-            Do operations on tokens list
+            Do operations on tokens list.
+
             First do multiplication and division, 
             and do them in order.
             Then we can do addition and subtraction.
