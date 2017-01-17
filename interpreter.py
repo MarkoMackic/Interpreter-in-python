@@ -300,7 +300,7 @@ class Interpreter(object):
                                 '''
                                     Since we can't have -|+ before 
                                     expression to solve it by our 
-                                    methods append that minus directly
+                                    methods append that sign directly
                                     to the first number value itself
                                 '''
                                 token.value = float(sign.value +
